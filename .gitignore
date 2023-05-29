@@ -111,3 +111,4 @@ plutus-pab/test-node/alonzo-purple/db
 
 # Test results
 */test-report-xml
+**/allure-report
