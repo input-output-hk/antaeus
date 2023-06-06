@@ -48,9 +48,29 @@ bls12381SigTest networkOptions TestParams{..} = do
   txIn <- Q.adaOnlyTxInAtAddress era localNodeConnectInfo w1Address
 
   let
-    tokenValues = C.valueFromList [(PS.verifyBlsSimpleAssetIdV2, 2), (PS.verifyBlsVrfAssetIdV2, 4), (PS.verifyBlsGroth16AssetIdV2, 8)]
+    tokenValues = C.valueFromList [
+      (PS.verifyBlsSimpleAssetIdV2, 1),
+      (PS.verifyBlsVrfAssetIdV2, 2),
+      (PS.verifyBlsGroth16AssetIdV2, 3),
+      (PS.verifyBlsSigG1AssetIdV2, 4),
+      (PS.verifyBlsSigG2AssetIdV2, 5),
+      (PS.verifyBlsAggregateSigSingleKeyG1AssetIdV2, 6),
+      (PS.verifyBlsAggregateSigMultiKeyG1AssetIdV2, 7),
+      (PS.verifyBlsSchnorrG1AssetIdV2, 8),
+      (PS.verifyBlsSchnorrG2AssetIdV2, 9)
+      ]
     txOut = Tx.txOut era (C.lovelaceToValue 3_000_000 <> tokenValues) w1Address
-    mintWitnesses = Map.fromList [PS.verifyBlsSimpleMintWitnessV2, PS.verifyBlsVrfMintWitnessV2, PS.verifyBlsGroth16MintWitnessV2]
+    mintWitnesses = Map.fromList [
+      PS.verifyBlsSimpleMintWitnessV2,
+      PS.verifyBlsVrfMintWitnessV2,
+      PS.verifyBlsGroth16MintWitnessV2,
+      PS.verifyBlsSigG1MintWitnessV2,
+      PS.verifyBlsSigG2MintWitnessV2,
+      PS.verifyBlsAggregateSigSingleKeyG1MintWitnessV2,
+      PS.verifyBlsAggregateSigMultiKeyG2MintWitnessV2,
+      PS.verifyBlsSchnorrG1MintWitnessV2,
+      PS.verifyBlsSchnorrG2MintWitnessV2
+      ]
     collateral = Tx.txInsCollateral era [txIn]
     txBodyContent = (Tx.emptyTxBodyContent era pparams)
       { C.txIns = Tx.pubkeyTxIns [txIn]
