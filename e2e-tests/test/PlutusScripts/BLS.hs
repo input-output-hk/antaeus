@@ -22,7 +22,7 @@ module PlutusScripts.BLS (
   ) where
 
 import Cardano.Api qualified as C
-import Data.ByteString as BS
+import Data.ByteString as BS hiding (foldl, map)
 import Data.Word (Word8)
 import Helpers.ScriptUtils (IsScriptContext (mkUntypedMintingPolicy))
 import OldPlutus.Scripts (MintingPolicy, mkMintingPolicyScript)
@@ -36,39 +36,56 @@ import PlutusTx.Builtins qualified as BI
 import PlutusTx.Prelude qualified as P
 import UntypedPlutusCore qualified as UPLC
 
-data BlsParams = BlsParams
-    { privKey :: Integer -- 32 bit private key
-    , msg     :: P.BuiltinByteString
+data BlsParamsWithPrivKey = BlsParamsWithPrivKey
+    { privKey     :: Integer -- 32 bit private key
+    , privMessage :: P.BuiltinByteString
     }
-PlutusTx.unstableMakeIsData ''BlsParams
+PlutusTx.unstableMakeIsData ''BlsParamsWithPrivKey
+
+data BlsParamsWithPubKey = BlsParamsWithPubKey
+    { pubMessage :: P.BuiltinByteString
+    , pubKey     :: P.BuiltinByteString
+    , pubSig     :: P.BuiltinByteString
+    }
+PlutusTx.unstableMakeIsData ''BlsParamsWithPubKey
+
+data BlsParamsWithAggregateSignature = BlsParamsWithAggregateSignature
+    { aggregateSigMessages :: [P.BuiltinByteString]
+    , aggregateSigPubKey   :: P.BuiltinByteString
+    , aggregateSignature   :: P.BuiltinByteString
+    }
+PlutusTx.unstableMakeIsData ''BlsParamsWithAggregateSignature
 
 blsAssetName :: C.AssetName
 blsAssetName = C.AssetName "BLS"
 
-verifyBlsParams :: BlsParams
-verifyBlsParams = BlsParams
-  {
-    -- sha256 hash of the phrase "I am a secret key" as an Integer
+verifyBlsParamsWithPrivKey :: BlsParamsWithPrivKey
+verifyBlsParamsWithPrivKey = BlsParamsWithPrivKey
+  { -- sha256 hash of the phrase "I am a secret key" as an Integer
     privKey = 50166937291276222007610100461546392414157570314060957244808461481762532157524 :: Integer
-  , msg  = BI.toBuiltin $ bytesFromHex "I am a message"
+  , privMessage  = BI.toBuiltin $ bytesFromHex "I am a message"
   }
 
-{-# INLINABLE g1 #-}
-g1 = bls12_381_G1_uncompress $ toBuiltin $ pack [151, 241, 211, 167, 49, 151, 215, 148, 38, 149, 99, 140, 79, 169, 172, 15, 195, 104, 140, 79, 151, 116, 185, 5, 161,78, 58, 63, 23, 27, 172, 88, 108, 85, 232, 63, 249, 122, 26, 239, 251, 58, 240, 10, 219, 34, 198, 187]
-{-# INLINABLE g2 #-}
-g2 = bls12_381_G2_uncompress $ toBuiltin $ pack [147, 224, 43, 96, 82, 113, 159, 96, 125, 172, 211, 160, 136, 39, 79, 101, 89, 107, 208, 208, 153, 32, 182,  26, 181, 218, 97, 187, 220, 127, 80, 73, 51, 76, 241, 18, 19, 148, 93, 87, 229, 172, 125, 5, 93, 4, 43, 126,  2, 74, 162, 178, 240, 143, 10, 145, 38, 8, 5, 39, 45, 197, 16, 81, 198, 228, 122, 212, 250, 64, 59, 2, 180,  81, 11, 100, 122, 227, 209, 119, 11, 172, 3, 38, 168, 5, 187, 239, 212, 128, 86, 200, 193, 33, 189, 184]
+blsSigBls12381G2XmdSha256SswuRoNul :: P.BuiltinByteString
+blsSigBls12381G2XmdSha256SswuRoNul = "424c535f5349475f424c53313233383147325f584d443a5348412d3235365f535357555f524f5f4e554c5f" -- ascci "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_NUL_"
 
--- BLS 12 381 simple verify minting policy --
+-- G1 and G2 generators
+{-# INLINABLE g1 #-}
+g1 = BI.bls12_381_G1_uncompress $ toBuiltin $ pack [151, 241, 211, 167, 49, 151, 215, 148, 38, 149, 99, 140, 79, 169, 172, 15, 195, 104, 140, 79, 151, 116, 185, 5, 161,78, 58, 63, 23, 27, 172, 88, 108, 85, 232, 63, 249, 122, 26, 239, 251, 58, 240, 10, 219, 34, 198, 187]
+{-# INLINABLE g2 #-}
+g2 = BI.bls12_381_G2_uncompress $ toBuiltin $ pack [147, 224, 43, 96, 82, 113, 159, 96, 125, 172, 211, 160, 136, 39, 79, 101, 89, 107, 208, 208, 153, 32, 182,  26, 181, 218, 97, 187, 220, 127, 80, 73, 51, 76, 241, 18, 19, 148, 93, 87, 229, 172, 125, 5, 93, 4, 43, 126,  2, 74, 162, 178, 240, 143, 10, 145, 38, 8, 5, 39, 45, 197, 16, 81, 198, 228, 122, 212, 250, 64, 59, 2, 180,  81, 11, 100, 122, 227, 209, 119, 11, 172, 3, 38, 168, 5, 187, 239, 212, 128, 86, 200, 193, 33, 189, 184]
+
+-- BLS 12 381 simple verify with private key minting policy --
 
 {-# INLINABLE mkVerifyBlsSimplePolicy #-}
-mkVerifyBlsSimplePolicy :: BlsParams -> sc -> Bool
-mkVerifyBlsSimplePolicy BlsParams{..} _sc = do
+mkVerifyBlsSimplePolicy :: BlsParamsWithPrivKey -> sc -> Bool
+mkVerifyBlsSimplePolicy BlsParamsWithPrivKey{..} _sc = do
   let
     -- calculate public key
     pubKey = BI.bls12_381_G1_scalarMul privKey g1
 
     -- Hash this msg to the G2
-    msgToG2 = BI.bls12_381_G2_hashToGroup msg
+    msgToG2 = BI.bls12_381_G2_hashToGroup privMessage BI.emptyByteString
 
     -- Create signature artifact in G2 with private key
     sigma = BI.bls12_381_G2_scalarMul privKey msgToG2
@@ -89,7 +106,7 @@ verifyBlsSimpleAssetIdV2 :: C.AssetId
 verifyBlsSimpleAssetIdV2 = C.AssetId (policyIdV2 verifyBlsSimplePolicyV2) blsAssetName
 
 verifyBlsSimpleRedeemer :: C.HashableScriptData
-verifyBlsSimpleRedeemer = toScriptData verifyBlsParams
+verifyBlsSimpleRedeemer = toScriptData verifyBlsParamsWithPrivKey
 
 verifyBlsSimpleMintWitnessV2 :: C.CardanoEra era
   -> (C.PolicyId, C.ScriptWitness C.WitCtxMint era)
@@ -106,14 +123,14 @@ verifyBlsSimpleMintWitnessV2 era =
 -}
 
 {-# INLINABLE mkVerifyBlsVrfPolicy #-}
-mkVerifyBlsVrfPolicy :: BlsParams -> sc -> Bool
-mkVerifyBlsVrfPolicy BlsParams{..} _sc = do
+mkVerifyBlsVrfPolicy :: BlsParamsWithPrivKey -> sc -> Bool
+mkVerifyBlsVrfPolicy BlsParamsWithPrivKey{..} _sc = do
   let
     -- calculate public key
     pub = BI.bls12_381_G2_scalarMul privKey g2
 
     -- hash this msg to G2
-    h = BI.bls12_381_G2_hashToGroup $ toBuiltin msg
+    h = BI.bls12_381_G2_hashToGroup (toBuiltin privMessage) BI.emptyByteString
 
     -- define first element of the proof of correct VRF
     gamma = BI.bls12_381_G2_scalarMul privKey h
@@ -145,7 +162,7 @@ mkVerifyBlsVrfPolicy BlsParams{..} _sc = do
     --        pubkey pub
     -- do the following calculation
     u  = BI.bls12_381_G2_add (BI.bls12_381_G2_scalarMul (os2ip c) pub) (BI.bls12_381_G2_scalarMul s g2)
-    h' = BI.bls12_381_G2_hashToGroup $ toBuiltin msg
+    h' = BI.bls12_381_G2_hashToGroup (toBuiltin privMessage) BI.emptyByteString
     v  = BI.bls12_381_G2_add (BI.bls12_381_G2_scalarMul (os2ip c) gamma) (BI.bls12_381_G2_scalarMul s h')
 
   -- and check
@@ -177,7 +194,7 @@ verifyBlsVrfAssetIdV2 :: C.AssetId
 verifyBlsVrfAssetIdV2 = C.AssetId (policyIdV2 verifyBlsVrfPolicyV2) blsAssetName
 
 verifyBlsVrfRedeemer :: C.HashableScriptData
-verifyBlsVrfRedeemer = toScriptData vrfBlsParams
+verifyBlsVrfRedeemer = toScriptData verifyBlsParamsWithPrivKey
 
 verifyBlsVrfMintWitnessV2 :: C.CardanoEra era
   -> (C.PolicyId, C.ScriptWitness C.WitCtxMint era)
@@ -377,3 +394,145 @@ verifyBlsGroth16MintWitnessV2 :: C.CardanoEra era
 verifyBlsGroth16MintWitnessV2 era =
     (policyIdV2 verifyBlsGroth16PolicyV2,
      mintScriptWitness era plutusL2 (Left verifyBlsGroth16PolicyScriptV2) verifyBlsGroth16Redeemer)
+
+---- BLS signature with the public key over G1 ----
+
+sigG1ParamsWithPubkey :: BlsParamsWithPubKey
+sigG1ParamsWithPubkey = BlsParamsWithPubKey
+  { pubMessage = "3e00ef2f895f40d67f5bb8e81f09a5a12c840ec3ce9a7f3b181be188ef711a1e"
+  , pubKey = "aa04a34d4db073e41505ebb84eee16c0094fde9fa22ec974adb36e5b3df5b2608639f091bff99b5f090b3608c3990173"
+  , pubSig = "808ccec5435a63ae01e10d81be2707ab55cd0dfc235dfdf9f70ad32799e42510d67c9f61d98a6578a96a76cf6f4c105d09262ec1d86b06515360b290e7d52d347e48438de2ea2233f3c72a0c2221ed2da5e115367bca7a2712165032340e0b29"
+  }
+
+{-# INLINABLE mkVerifySigG1 #-}
+mkVerifySigG1 :: BlsParamsWithPubKey -> sc -> Bool
+mkVerifySigG1 BlsParamsWithPubKey{..} _sc = do
+  let
+    pkDeser = BI.bls12_381_G1_uncompress pubKey
+    sigDeser = BI.bls12_381_G2_uncompress pubSig
+    hashedMsg = BI.bls12_381_G2_hashToGroup pubMessage blsSigBls12381G2XmdSha256SswuRoNul
+
+  BI.bls12_381_finalVerify (BI.bls12_381_millerLoop pkDeser hashedMsg) (BI.bls12_381_millerLoop g1 sigDeser)
+
+verifyBlsSigG1PolicyV2 :: MintingPolicy
+verifyBlsSigG1PolicyV2 = mkMintingPolicyScript
+  $$(PlutusTx.compile [|| wrap ||])
+  where
+    wrap = mkUntypedMintingPolicy @PlutusV2.ScriptContext mkVerifySigG1
+
+verifyBlsSigG1PolicyScriptV2 :: C.PlutusScript C.PlutusScriptV2
+verifyBlsSigG1PolicyScriptV2 = policyScript verifyBlsSigG1PolicyV2
+
+verifyBlsSigG1AssetIdV2 :: C.AssetId
+verifyBlsSigG1AssetIdV2 = C.AssetId (policyIdV2 verifyBlsSigG1PolicyV2) blsAssetName
+
+verifyBlsSigG1Redeemer :: C.HashableScriptData
+verifyBlsSigG1Redeemer = toScriptData sigG1ParamsWithPubkey
+
+verifyBlsSigG1MintWitnessV2 :: C.CardanoEra era
+  -> (C.PolicyId, C.ScriptWitness C.WitCtxMint era)
+verifyBlsSigG1MintWitnessV2 era =
+    (policyIdV2 verifyBlsSigG1PolicyV2,
+     mintScriptWitness era plutusL2 (Left verifyBlsSigG1PolicyScriptV2) verifyBlsSigG1Redeemer)
+
+---- BLS signature with the public key over G2 ----
+
+sigG2ParamsWithPubkey :: BlsParamsWithPubKey
+sigG2ParamsWithPubkey = BlsParamsWithPubKey
+  { pubMessage = "5032ec38bbc5da98ee0c6f568b872a65a08abf251deb21bb4b56e5d8821e68aa"
+  , pubKey = "b4953c4ba10c4d4196f90169e76faf154c260ed73fc77bb65dc3be31e0cec614a7287cda94195343676c2c57494f0e651527e6504c98408e599a4eb96f7c5a8cfb85d2fdc772f28504580084ef559b9b623bc84ce30562ed320f6b7f65245ad4"
+  , pubSig = "a9d4de7b0b2805fe52bccb86415ef7b8ffecb313c3c254044dfc1bdc531d3eae999d87717822a052692140774bd7245c"
+  }
+
+{-# INLINABLE mkVerifySigG2 #-}
+mkVerifySigG2 :: BlsParamsWithPubKey -> sc -> Bool
+mkVerifySigG2 BlsParamsWithPubKey{..} _sc = do
+  let
+    pkDeser = BI.bls12_381_G2_uncompress pubKey
+    sigDeser = BI.bls12_381_G1_uncompress pubSig
+    hashedMsg = BI.bls12_381_G1_hashToGroup pubMessage blsSigBls12381G2XmdSha256SswuRoNul
+
+  BI.bls12_381_finalVerify (BI.bls12_381_millerLoop pkDeser hashedMsg) (BI.bls12_381_millerLoop g1 sigDeser)
+
+verifyBlsSigG2PolicyV2 :: MintingPolicy
+verifyBlsSigG2PolicyV2 = mkMintingPolicyScript
+  $$(PlutusTx.compile [|| wrap ||])
+  where
+    wrap = mkUntypedMintingPolicy @PlutusV2.ScriptContext mkVerifySigG2
+
+verifyBlsSigG2PolicyScriptV2 :: C.PlutusScript C.PlutusScriptV2
+verifyBlsSigG2PolicyScriptV2 = policyScript verifyBlsSigG2PolicyV2
+
+verifyBlsSigG2AssetIdV2 :: C.AssetId
+verifyBlsSigG2AssetIdV2 = C.AssetId (policyIdV2 verifyBlsSigG2PolicyV2) blsAssetName
+
+verifyBlsSigG2Redeemer :: C.HashableScriptData
+verifyBlsSigG2Redeemer = toScriptData sigG2ParamsWithPubkey
+
+verifyBlsSigG2MintWitnessV2 :: C.CardanoEra era
+  -> (C.PolicyId, C.ScriptWitness C.WitCtxMint era)
+verifyBlsSigG2MintWitnessV2 era =
+    (policyIdV2 verifyBlsSigG2PolicyV2,
+     mintScriptWitness era plutusL2 (Left verifyBlsSigG2PolicyScriptV2) verifyBlsSigG2Redeemer)
+
+---- BLS aggregate signature with same key and different messages with public key over G1 ----
+
+aggregateSigG1Params :: BlsParamsWithAggregateSignature
+aggregateSigG1Params = BlsParamsWithAggregateSignature
+  { aggregateSigMessages =
+    [ "2ba037cdb63cb5a7277dc5d6dc549e4e28a15c70670f0e97787c170485829264"
+    , "ecbf14bddeb68410f423e8849e0ce35c10d20a802bbc3d9a6ca01c386279bf01"
+    , "e8f75f478cb0d159db767341602fa02d3e01c3d9aacf9b686eccf1bb5ff4c8fd"
+    , "21473e89d50f51f9a1ced2390c72ee7e37f15728e61d1fb2c8c839495e489052"
+    , "8c146d00fe2e1caec31b159fc42dcd7e06865c6fa5267c6ca9c5284e651e175a"
+    , "362f469b6e722347de959f76533315542ffa440d37cde8862da3b3331e53b60d"
+    , "73baeb620e63a2e646ea148974350aa337491e5f5fc087cb429173d1eeb74f5a"
+    , "73acc6c3d72b59b8bf5ab58cdcf76aa001689aac938a75b1bb25d77b5382898c"
+    , "4e73ba04bae3a083c8a2109f15b8c4680ae4ba1c70df5b513425349a77e95d3b"
+    , "565825a0227d45068e61eb90aa1a4dc414c0976911a52d46b39f40c5849e5abe"
+    ]
+  , aggregateSigPubKey = "97c919babda8d928d771d107a69adfd85a75cee2cedc4afa4c0a7e902f38b340ea21a701a46df825210dd6942632b46c"
+  , aggregateSignature = "b425291f423235b022cdd038e1a3cbdcc73b5a4470251634abb874c7585a3a05b8ea54ceb93286edb0e9184bf9a852a1138c6dd860e4b756c63dff65c433a6c5aa06834f00ac5a1a1acf6bedc44bd4354f9d36d4f20f66318f39116428fabb88"
+  }
+
+{-# INLINABLE mkAggregateSigG1 #-}
+mkAggregateSigG1 :: BlsParamsWithPubKey -> sc -> Bool
+mkAggregateSigG1 BlsParamsWithPubKey{..} _sc = do
+  let
+    hashedMsgs = mapWithConstSecondArg BI.bls12_381_G2_hashToGroup blsSigBls12381G2XmdSha256SswuRoNul messageElements
+    pkDeser = BI.bls12_381_G1_uncompress aggregateSigPubKey
+    aggrSigDeser = BI.bls12_381_G1_uncompress aggregateSignature
+    aggrMsg = foldl1 BI.bls12_381_G1_add hashedMsgs
+
+  BI.bls12_381_finalVerify (BI.bls12_381_millerLoop pkDeser aggrMsg) (BI.bls12_381_millerLoop g1 aggrSigDeser)
+
+    where
+      mapWithConstSecondArg :: (a -> b) -> a -> [c] -> [b]
+      mapWithConstSecondArg f arg2 = map (\x -> f x arg2)
+
+  --  * hashed_msg_i = G2HashToCurve(msg_i, "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_NUL_") for i in [1, 10]
+  --  * pk_deser = G1Decompress(pk)
+  --  * aggr_sig_deser = G2Decompress(aggr_sig)
+  --  * aggr_msg = sum_{i\in[1,10]} hashed_msg_i
+  --  * Check that pairing(pk_deser, aggr_msg) = pairing(G1Generator, aggr_sig_deser)
+
+verifyBlsSigG2PolicyV2 :: MintingPolicy
+verifyBlsSigG2PolicyV2 = mkMintingPolicyScript
+  $$(PlutusTx.compile [|| wrap ||])
+  where
+    wrap = mkUntypedMintingPolicy @PlutusV2.ScriptContext mkVerifySigG2
+
+verifyBlsSigG2PolicyScriptV2 :: C.PlutusScript C.PlutusScriptV2
+verifyBlsSigG2PolicyScriptV2 = policyScript verifyBlsSigG2PolicyV2
+
+verifyBlsSigG2AssetIdV2 :: C.AssetId
+verifyBlsSigG2AssetIdV2 = C.AssetId (policyIdV2 verifyBlsSigG2PolicyV2) blsAssetName
+
+verifyBlsSigG2Redeemer :: C.HashableScriptData
+verifyBlsSigG2Redeemer = toScriptData sigG2ParamsWithPubkey
+
+verifyBlsSigG2MintWitnessV2 :: C.CardanoEra era
+  -> (C.PolicyId, C.ScriptWitness C.WitCtxMint era)
+verifyBlsSigG2MintWitnessV2 era =
+    (policyIdV2 verifyBlsSigG2PolicyV2,
+     mintScriptWitness era plutusL2 (Left verifyBlsSigG2PolicyScriptV2) verifyBlsSigG2Redeemer)
