@@ -42,10 +42,12 @@ PlutusTx.unstableMakeIsData ''BlsParams
 
 redeemerParams :: BlsParams
 redeemerParams = BlsParams
-  { message = "0558db9aff738e5421439601e7f30e88b74f43b80c1d172b5d371ce0dc05c912"
-  , pubKey = "b91cacee903a53383c504e9e9a39e57d1eaa6403d5d38fc9496e5007d54ca92d106d1059f09461972aa98514d07000ae"
-  , signature = ("8477e8491acc1cfbcf675acf7cf6b92e027cad7dd604a0e8205703aa2cc590066c1746f89e10d492d0230e6620c29726",
-                 "4e908280c0100cfe53501171ffa93528b9e2bb551d1025decb4a5b416a0aee53")
+  { message = toBuiltin $ bytesFromHex  "0558db9aff738e5421439601e7f30e88b74f43b80c1d172b5d371ce0dc05c912"
+  , pubKey = toBuiltin $ bytesFromHex ("b91cacee903a53383c504e9e9a39e57d1eaa6403d5d38fc9" <>
+                                       "496e5007d54ca92d106d1059f09461972aa98514d07000ae")
+  , signature = (toBuiltin $ bytesFromHex
+                   "8477e8491acc1cfbcf675acf7cf6b92e027cad7dd604a0e8205703aa2cc590066c1746f89e10d492d0230e6620c29726",
+                 toBuiltin $ bytesFromHex "4e908280c0100cfe53501171ffa93528b9e2bb551d1025decb4a5b416a0aee53")
   }
 
 ---- BLS Schnorr signature in G1 ----
@@ -58,30 +60,41 @@ redeemerParams = BlsParams
   * Check that r_deser * G1Generator = A_deser + c * pk_deser
 -}
 {-# INLINABLE mkBlsSchnorrG1 #-}
-mkBlsSchnorrG1 :: BlsParams -> sc -> Bool
-mkBlsSchnorrG1 BlsParams{..} _sc = do
+mkBlsSchnorrG1 ::
+     BuiltinByteString
+  -> BuiltinByteString
+  -> BlsParams
+  -> sc
+  -> Bool
+mkBlsSchnorrG1 bs16Null g1Gen BlsParams{..} _sc = do
   let
-    A = fst signature
-    r = snd signature
-    c = BI.bls12_381_G1_uncompress $ BI.sliceByteString 0 16
-      (BI.sha2_256 (A `BI.appendByteString` pubkey `BI.appendByteString` message)) 0 0
-    pkDeser = BI.bls12_381_G1_uncompress pubkey
-    ADeser = BI.bls12_381_G1_uncompress A
-    rDeser = convertByteStringToInteger r 0 0
-  BI.bls12_381_finalVerify (rDeser `BI.bls12_381_G1_scalarMul` g1)
-                           ((ADeser `BI.bls12_381_G1_add` c) `BI.bls12_381_G1_scalarMul` pkDeser)
+    a = BI.fst signature
+    r = BI.snd signature
+    c = byteStringToInteger (Tx.sliceByteString 0 16
+      (Tx.sha2_256 (a `Tx.appendByteString` pubKey `Tx.appendByteString` message)) `Tx.appendByteString` bs16Null)
+    pkDeser = BI.bls12_381_G1_uncompress pubKey
+    aDeser = BI.bls12_381_G1_uncompress a
+    rDeser = byteStringToInteger r
+  (rDeser `Tx.bls12_381_G1_scalarMul` g1Gen) `Tx.bls12_381_G1_equals`
+    (aDeser `Tx.bls12_381_G1_add` (c `Tx.bls12_381_G1_scalarMul` pkDeser))
     where
-      -- an inefficient workaround for lack of ByteString to Integer interpretation
+      -- a (probably inefficient) workaround for lack of ByteString to Integer interpretation
       -- to be addressed by byteStringToInteger in https://github.com/input-output-hk/plutus/pull/4733
-      convertByteStringToInteger :: BuiltinByteString -> Integer -> Integer -> Integer
-      convertByteStringToInteger bs i acc
-        | i >= lengthOfByteString bs = acc
-        | otherwise = convertByteStringToInteger bs (i + 1) (256 * acc + indexByteString bs i) -- (acc + (indexByteString bs i) * 256 ^ i)
+      byteStringToInteger  :: BuiltinByteString -> Integer
+      byteStringToInteger b =
+        go 0
+          where len = BI.lengthOfByteString b
+                go i =
+                    if i >= len
+                    then 0
+                    else (Tx.indexByteString b i) + 256 * (go (i + 1))
 
 
 verifyBlsSchnorrG1PolicyV2 :: MintingPolicy
-verifyBlsSchnorrG1PolicyV2 = mkMintingPolicyScript
+verifyBlsSchnorrG1PolicyV2 = mkMintingPolicyScript $
   $$(PlutusTx.compile [|| wrap ||])
+    `PlutusTx.applyCode` PlutusTx.liftCode byteString16Null
+    `PlutusTx.applyCode` PlutusTx.liftCode g1Generator
   where
     wrap = mkUntypedMintingPolicy @PlutusV2.ScriptContext mkBlsSchnorrG1
 

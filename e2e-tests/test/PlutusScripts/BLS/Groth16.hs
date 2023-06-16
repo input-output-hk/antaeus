@@ -179,7 +179,8 @@ mkVerifyBlsGroth16Policy
     (BI.bls12_381_G1_uncompress -> a')
     (BI.bls12_381_G2_uncompress -> b')
     (BI.bls12_381_G1_uncompress -> c')
-    s =
+    s
+    _sc =
         let l1 = BI.bls12_381_millerLoop a' b'
             l2 = BI.bls12_381_millerLoop alpha' beta'
             l3 = BI.bls12_381_millerLoop c' delta'
@@ -193,7 +194,7 @@ mkVerifyBlsGroth16Policy
  first.  This should return `True`. -}
 verifyBlsGroth16PolicyV2 :: MintingPolicy
 verifyBlsGroth16PolicyV2 = mkMintingPolicyScript $
-    $$(PlutusTx.compile [|| mkUntypedMintingPolicy . mkVerifyBlsGroth16Policy ||])
+    $$(PlutusTx.compile [|| wrap ||])
       `PlutusTx.applyCode` (PlutusTx.liftCode $ g1 alpha)
       `PlutusTx.applyCode` (PlutusTx.liftCode $ g2 beta)
       `PlutusTx.applyCode` (PlutusTx.liftCode $ g2 gamma)
@@ -203,13 +204,9 @@ verifyBlsGroth16PolicyV2 = mkMintingPolicyScript $
       `PlutusTx.applyCode` (PlutusTx.liftCode $ g1 a)
       `PlutusTx.applyCode` (PlutusTx.liftCode $ g2 b)
       `PlutusTx.applyCode` (PlutusTx.liftCode $ g1 c)
-      --`PlutusTx.applyCode` PlutusTx.liftCode scalar
-
--- | Check that the Haskell version returns the correct result.
--- checkGroth16Verify_Haskell :: Bool
--- checkGroth16Verify_Haskell =
---     groth16Verify (g1 alpha) (g2 beta) (g2 gamma) (g2 delta)
---                       (g1 gamma_abc_1) (g1 gamma_abc_2) (g1 a) (g2 b) (g1 c) scalar
+      --`PlutusTx.applyCode` PlutusTx.liftCode scalar -- passed as redeemer
+  where
+    wrap = mkUntypedMintingPolicy @PlutusV2.ScriptContext mkVerifyBlsGroth16Policy
 
 verifyBlsGroth16PolicyScriptV2 :: C.PlutusScript C.PlutusScriptV2
 verifyBlsGroth16PolicyScriptV2 = policyScript verifyBlsGroth16PolicyV2

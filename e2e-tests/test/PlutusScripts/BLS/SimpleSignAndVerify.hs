@@ -42,18 +42,22 @@ PlutusTx.unstableMakeIsData ''BlsParams
 redeemerParams :: BlsParams
 redeemerParams = BlsParams
   { -- sha256 hash of the phrase "I am a secret key" as an Integer
-    privKey = 50166937291276222007610100461546392414157570314060957244808461481762532157524 :: Integer
-  , message  = BI.toBuiltin $ bytesFromHex "I am a message"
+    privKey = 50166937291276222007610100461546392414157570314060957244808461481762532157524
+  , message  = "I am a message"
   }
 
 -- BLS 12 381 simple verify with private key minting policy --
 
 {-# INLINABLE mkVerifyBlsSimplePolicy #-}
-mkVerifyBlsSimplePolicy :: BlsParams -> sc -> Bool
-mkVerifyBlsSimplePolicy BlsParams{..} _sc = do
+mkVerifyBlsSimplePolicy ::
+     BuiltinBLS12_381_G1_Element
+  -> BlsParams
+  -> sc
+  -> Bool
+mkVerifyBlsSimplePolicy g1Gen BlsParams{..} _sc = do
   let
     -- calculate public key
-    pubKey = BI.bls12_381_G1_scalarMul privKey g1
+    pubKey = BI.bls12_381_G1_scalarMul privKey g1Gen
 
     -- Hash this msg to the G2
     msgToG2 = BI.bls12_381_G2_hashToGroup message BI.emptyByteString
@@ -62,11 +66,12 @@ mkVerifyBlsSimplePolicy BlsParams{..} _sc = do
     sigma = BI.bls12_381_G2_scalarMul privKey msgToG2
 
   -- verify the msg with signature sigma with the check e(g1,sigma)=e(pub,msgToG2)
-  BI.bls12_381_finalVerify (BI.bls12_381_millerLoop g1 sigma) (BI.bls12_381_millerLoop pubKey msgToG2)
+  BI.bls12_381_finalVerify (BI.bls12_381_millerLoop g1Gen sigma) (BI.bls12_381_millerLoop pubKey msgToG2)
 
 verifyBlsSimplePolicyV2 :: MintingPolicy
-verifyBlsSimplePolicyV2 = mkMintingPolicyScript
+verifyBlsSimplePolicyV2 = mkMintingPolicyScript $
   $$(PlutusTx.compile [|| wrap ||])
+    `PlutusTx.applyCode` PlutusTx.liftCode g1Generator
   where
     wrap = mkUntypedMintingPolicy @PlutusV2.ScriptContext mkVerifyBlsSimplePolicy
 

@@ -42,8 +42,8 @@ PlutusTx.unstableMakeIsData ''BlsParams
 redeemerParams :: BlsParams
 redeemerParams = BlsParams
   { -- sha256 hash of the phrase "I am a secret key" as an Integer
-    privKey = 50166937291276222007610100461546392414157570314060957244808461481762532157524 :: Integer
-  , message  = BI.toBuiltin $ bytesFromHex "I am a message"
+    privKey = 50166937291276222007610100461546392414157570314060957244808461481762532157524
+  , message  = "I am a message"
   }
 
 ---- Verify BLS VRF ----
@@ -54,14 +54,18 @@ redeemerParams = BlsParams
 -}
 
 {-# INLINABLE mkVerifyBlsVrfPolicy #-}
-mkVerifyBlsVrfPolicy :: BlsParams -> sc -> Bool
-mkVerifyBlsVrfPolicy BlsParams{..} _sc = do
+mkVerifyBlsVrfPolicy ::
+     BuiltinBLS12_381_G2_Element
+  -> BlsParams
+  -> sc
+  -> Bool
+mkVerifyBlsVrfPolicy g2Gen BlsParams{..} _sc = do
   let
     -- calculate public key
     pub = BI.bls12_381_G2_scalarMul privKey g2
 
     -- hash this msg to G2
-    h = BI.bls12_381_G2_hashToGroup (toBuiltin message) BI.emptyByteString
+    h = BI.bls12_381_G2_hashToGroup message BI.emptyByteString
 
     -- define first element of the proof of correct VRF
     gamma = BI.bls12_381_G2_scalarMul privKey h
@@ -72,7 +76,7 @@ mkVerifyBlsVrfPolicy BlsParams{..} _sc = do
     -- define second element of the proof of correct VRF
     -- the paper notes that this can actually be truncated to 128 bits without loss of the 128 bits security.
     -- truncating this will allow for smaller proof sizes.
-    c = sha2_256 . mconcat $ BI.bls12_381_G2_compress <$> [g2, h, pub, gamma, BI.bls12_381_G2_scalarMul k g2, BI.bls12_381_G2_scalarMul k h]
+    c = sha2_256 . mconcat $ BI.bls12_381_G2_compress <$> [g2Gen, h, pub, gamma, BI.bls12_381_G2_scalarMul k g2Gen, BI.bls12_381_G2_scalarMul k h]
 
     -- define the third and last element of a proof of correct VRF
     s = (k - (os2ip c) * priv) `modulo` 52435875175126190479447740508185965837690552500527637822603658699938581184513
@@ -92,12 +96,12 @@ mkVerifyBlsVrfPolicy BlsParams{..} _sc = do
     --        proof pi (gamma, c, s)
     --        pubkey pub
     -- do the following calculation
-    u  = BI.bls12_381_G2_add (BI.bls12_381_G2_scalarMul (os2ip c) pub) (BI.bls12_381_G2_scalarMul s g2)
-    h' = BI.bls12_381_G2_hashToGroup (toBuiltin message) BI.emptyByteString
+    u  = BI.bls12_381_G2_add (BI.bls12_381_G2_scalarMul (os2ip c) pub) (BI.bls12_381_G2_scalarMul s g2Gen)
+    h' = BI.bls12_381_G2_hashToGroup message BI.emptyByteString
     v  = BI.bls12_381_G2_add (BI.bls12_381_G2_scalarMul (os2ip c) gamma) (BI.bls12_381_G2_scalarMul s h')
 
   -- and check
-  c == (sha2_256 . mconcat $ BI.bls12_381_G2_compress <$> [g2,h',pub,gamma,u,v])
+  c == (sha2_256 . mconcat $ BI.bls12_381_G2_compress <$> [g2Gen,h',pub,gamma,u,v])
 
   where
     os2ip :: BI.BuiltinByteString -> Integer
@@ -113,8 +117,9 @@ mkVerifyBlsVrfPolicy BlsParams{..} _sc = do
           | otherwise             = intAtLastByte xs + 256 * go (stripLastByte xs)
 
 verifyBlsVrfPolicyV2 :: MintingPolicy
-verifyBlsVrfPolicyV2 = mkMintingPolicyScript
+verifyBlsVrfPolicyV2 = mkMintingPolicyScript $
   $$(PlutusTx.compile [|| wrap ||])
+    `PlutusTx.applyCode` PlutusTx.liftCode g2Generator
   where
     wrap = mkUntypedMintingPolicy @PlutusV2.ScriptContext mkVerifyBlsVrfPolicy
 

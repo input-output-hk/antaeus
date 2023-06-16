@@ -42,31 +42,42 @@ PlutusTx.unstableMakeIsData ''BlsParams
 
 redeemerParams :: BlsParams
 redeemerParams = BlsParams
-  { message = "e345b7f2c017b16bb335c696bc0cc302f3db897fa25365a2ead1f149d87a97e8"
+  { message = toBuiltin $ bytesFromHex
+                "e345b7f2c017b16bb335c696bc0cc302f3db897fa25365a2ead1f149d87a97e8"
   , pubKeys = [
-      "83718f20d08471565b3a6ca6ea82c1928e8730f87e2afe460b74842f2880facd8e63b8abcdcd7350fe5813a08aa0efed" ++
-      "13216b10de1c56dc059c3a8910bd97ae133046ae031d2a53a44e460ab71ebda94bab64ed7478cf1a91b6d3981e32fc95",
-      "814f825911bd066855333b74a3cc564d512503ee29ea1ec3bd57a3c07fa5768ad27ea1ddd8047f43fbc9a4ebda897c14" ++
-      "06415fefbb8838b8782aa747e2fde7b1813d0f89fad06c8971041c9427abf848503e34e3ca033ba85d50b72ffac4be4a",
-      "9974c70513ed5538a8e55f5ce1a0267282b9e8431e25ae566950b2d0793a44a0a3c52110f4d83d694a5296615ee68573" ++
-      "098c14d255783a9b1a169d2be1baefbef914a4f830a9099f720063914cc919064d2244582bb9f302eac39c8b195cf3d2",
-      "894a3a01d38169a38bea13097cf904dd3ff9dceefb51e8b539725a237ae55a361758be1cdf0e21a7b8db3599adaf2305" ++
-      "050f1d8450b924a4b910ff536fc2f7960cd3251c2a457b975d46f7c0f74493cc9b5e8d2fed2e489363e641cc79933d1e",
-      "9646da0149ed140e33a99e1ffc5fe9c97c2368ca273544024993cdcb7aa04c0be936e6d4427747e62c4caea4fe1f69e5" ++
-      "162fad222e0487f5556524c9d3db74921e1c0f5893f0e26c759e3873e8fd6637e6051f70ef9a3363cf284e8eee67bcf3",
-      "b75743fb2f8321ac56cee19aacd7e141a3592b7230992ea84d8800d45ad71924a477f61cf9d4a2783df59dac21cd17e7" ++
-      "0e4ce5d526cbe73edc4a10b78fa56a2ef34d2009f2756d2d50188031e026a6a1dadcd5e753f5e7f7276048277d3819f1",
-      "873c1e7d525265afa8c037d33874261a90daaa2c6ed5e46ed043ec48a28b7111d0de65800aa72448c1fdb1026ba076bd" ++
-      "04193bd2d04e0de63e7a008b8417420eb4920767a1d32f6330ed25bdb4dc7726d989d6cf192db6b32728bb388195ba27",
-      "b993f867f9f1f84c3c5c3e5b80013055da7705491c36a80e1201a6a503d7364000c50bc27e03477646874a3074cc4e39" ++
-      "0febfea78a2b4d0e40c57d6deaf9fae430a19fcce0c03f43ff8f7e788de0c7b8ce1b69b69d1d026175c8f2730777866d",
-      "99836a204576636f34a4663cfa7e02a05cb2d4fd1b582427d199ac3ddac6f087968d2290198aa15e04f6e7e0d070b7dd" ++
-      "03607db9c2e4b17709853c30b2f6490261599408fbbc17371de74d0a2a76ff10cd8c9b55461c444bbebc82547bb40c9f",
-      "96f8d678f40dd83b2060e14372d0bc43a423fecac44f082afd89cb481b855885ac83fb366516dc74023cc41a0c606be2" ++
-      "067ba826ea612f84c9f0e895d02bc04d6c34e201ff8c26cc22cb4c426c53f503d8948eafceb12e2f4b6ad49b4e051690"
-      ]
-  , aggregateSignature =
-      "89d9757c2467dfd987f35c462b7a4adf8e7bfd6fb82edfd42a22f985083f4e6fc45ad2548093fb479b2bd1f48b446ae6"
+      toBuiltin $ bytesFromHex
+        ("83718f20d08471565b3a6ca6ea82c1928e8730f87e2afe460b74842f2880facd8e63b8abcdcd7350fe5813a08aa0efed" <>
+         "13216b10de1c56dc059c3a8910bd97ae133046ae031d2a53a44e460ab71ebda94bab64ed7478cf1a91b6d3981e32fc95")
+    , toBuiltin $ bytesFromHex
+        ("814f825911bd066855333b74a3cc564d512503ee29ea1ec3bd57a3c07fa5768ad27ea1ddd8047f43fbc9a4ebda897c14" <>
+         "06415fefbb8838b8782aa747e2fde7b1813d0f89fad06c8971041c9427abf848503e34e3ca033ba85d50b72ffac4be4a")
+    , toBuiltin $ bytesFromHex
+        ("9974c70513ed5538a8e55f5ce1a0267282b9e8431e25ae566950b2d0793a44a0a3c52110f4d83d694a5296615ee68573" <>
+         "098c14d255783a9b1a169d2be1baefbef914a4f830a9099f720063914cc919064d2244582bb9f302eac39c8b195cf3d2")
+    , toBuiltin $ bytesFromHex
+        ("894a3a01d38169a38bea13097cf904dd3ff9dceefb51e8b539725a237ae55a361758be1cdf0e21a7b8db3599adaf2305" <>
+         "050f1d8450b924a4b910ff536fc2f7960cd3251c2a457b975d46f7c0f74493cc9b5e8d2fed2e489363e641cc79933d1e")
+    , toBuiltin $ bytesFromHex
+        ("9646da0149ed140e33a99e1ffc5fe9c97c2368ca273544024993cdcb7aa04c0be936e6d4427747e62c4caea4fe1f69e5" <>
+         "162fad222e0487f5556524c9d3db74921e1c0f5893f0e26c759e3873e8fd6637e6051f70ef9a3363cf284e8eee67bcf3")
+    , toBuiltin $ bytesFromHex
+        ("b75743fb2f8321ac56cee19aacd7e141a3592b7230992ea84d8800d45ad71924a477f61cf9d4a2783df59dac21cd17e7" <>
+         "0e4ce5d526cbe73edc4a10b78fa56a2ef34d2009f2756d2d50188031e026a6a1dadcd5e753f5e7f7276048277d3819f1")
+    , toBuiltin $ bytesFromHex
+        ("873c1e7d525265afa8c037d33874261a90daaa2c6ed5e46ed043ec48a28b7111d0de65800aa72448c1fdb1026ba076bd" <>
+         "04193bd2d04e0de63e7a008b8417420eb4920767a1d32f6330ed25bdb4dc7726d989d6cf192db6b32728bb388195ba27")
+    , toBuiltin $ bytesFromHex
+        ("b993f867f9f1f84c3c5c3e5b80013055da7705491c36a80e1201a6a503d7364000c50bc27e03477646874a3074cc4e39" <>
+        "0febfea78a2b4d0e40c57d6deaf9fae430a19fcce0c03f43ff8f7e788de0c7b8ce1b69b69d1d026175c8f2730777866d")
+    , toBuiltin $ bytesFromHex
+        ("99836a204576636f34a4663cfa7e02a05cb2d4fd1b582427d199ac3ddac6f087968d2290198aa15e04f6e7e0d070b7dd" <>
+        "03607db9c2e4b17709853c30b2f6490261599408fbbc17371de74d0a2a76ff10cd8c9b55461c444bbebc82547bb40c9f")
+    , toBuiltin $ bytesFromHex
+        ("96f8d678f40dd83b2060e14372d0bc43a423fecac44f082afd89cb481b855885ac83fb366516dc74023cc41a0c606be2" <>
+        "067ba826ea612f84c9f0e895d02bc04d6c34e201ff8c26cc22cb4c426c53f503d8948eafceb12e2f4b6ad49b4e051690")
+    ]
+  , aggregateSignature = toBuiltin $ bytesFromHex ("b24d876661d0d1190c796bf7eaa7e02b807ff603093b1733" <>
+                                                   "6289d4de0477f6c17afb487275cb9de44325016edfeda042")
   }
 
 ---- BLS aggregate signature with different keys and same message with public key over G2 ----
@@ -79,34 +90,75 @@ redeemerParams = BlsParams
 -- * aggr_pk = sum_{i\in[1,10]} ds_scalar^i * pk_deser_i
 -- * Check that pairing(aggr_pk, hashed_msg) = pairing(G1Generator, aggr_sig_deser)
 -}
-{-# INLINABLE mkAggregateSigMultiKeyG1 #-}
-mkBlsAggregateSigMultiKeyG2 :: BlsParams -> sc -> Bool
-mkBlsAggregateSigMultiKeyG2 BlsParams{..} _sc = do
+{-# INLINABLE aggregateMultiKeyG2Script #-}
+aggregateMultiKeyG2Script ::
+     BuiltinByteString
+  -> BuiltinByteString
+  -> BuiltinBLS12_381_G2_Element
+  -> BlsParams
+  -> sc
+  -> Bool
+aggregateMultiKeyG2Script bs16Null dst g2Gen BlsParams{..} _sc = do
   let
-    hashedMsg = BI.bls12_381_G1_hashToGroup message blsSigBls12381G2XmdSha256SswuRoNul
-    pksDeser = BI.bls12_381_G1_uncompress <$> pubKeys
-    dsScalar = convertByteStringToInteger $ BI.sliceByteString 0 16
-      (BI.sha2_256 $ BI.foldl BI.appendByteString (head pubKeys) pubKeys) 0 0 -- PlutusTx.Foldable has no foldl1
-    aggrSigDeser = BI.bls12_381_G2_uncompress aggregateSignature
-    aggrPk = calcAggregatedPubkeys dsScalar pksDeser 0 0
-  BI.bls12_381_finalVerify (BI.bls12_381_millerLoop aggrPk hashedMsg) (BI.bls12_381_millerLoop g1 aggrSigDeser)
-    where
-      -- an inefficient workaround for lack of ByteString to Integer interpretation
-      -- to be addressed by byteStringToInteger in https://github.com/input-output-hk/plutus/pull/4733
-      convertByteStringToInteger :: BuiltinByteString -> Integer -> Integer -> Integer
-      convertByteStringToInteger bs i acc
-        | i >= lengthOfByteString bs = acc
-        | otherwise = convertByteStringToInteger bs (i + 1) (256 * acc + indexByteString bs i) -- (acc + (indexByteString bs i) * 256 ^ i)
+    hashedMsg = BI.bls12_381_G1_hashToGroup message dst
+    pksDeser = BI.map BI.bls12_381_G2_uncompress pubKeys
+    -- scalar calcuates to (142819114285630344964654001480828217341 :: Integer)
+    dsScalar = byteStringToInteger (Tx.sliceByteString 0 16
+               (Tx.sha2_256 (foldl1 BI.appendByteString pubKeys)) `Tx.appendByteString` bs16Null)
+    aggrSigDeser = BI.bls12_381_G1_uncompress aggregateSignature
+    aggrPk = calcAggregatedPubkeys dsScalar pksDeser
 
-      calcAggregatedPubkeys :: Integer -> BI.BuiltinByteString -> Integer -> Integer -> Integer
-      calcAggregatedPubkeys dsScalar' pksDeser' i acc
-        | i >= length pksDeser' = acc
-        | otherwise = calcAggregatedPubkeys dsScalar' pksDeser' (i + 1)
-                      (acc + dsScalar' ^ (i + 1) `BI.bls12_381_G1_scalarMul` pksDeser' !! i)
+  BI.bls12_381_finalVerify (Tx.bls12_381_millerLoop hashedMsg aggrPk) (Tx.bls12_381_millerLoop aggrSigDeser g2Gen)
+    where
+      -- PlutusTx.Foldable has no foldl1
+      foldl1 :: (a -> a -> a) -> [a] -> a
+      foldl1 _ []     = traceError "foldr1: empty list"
+      foldl1 _ [_]    = traceError "foldr1: only one element in list"
+      foldl1 f (x:xs) = BI.foldl f x xs
+
+      -- a (probably inefficient) workaround for lack of ByteString to Integer interpretation
+      -- to be addressed by byteStringToInteger in https://github.com/input-output-hk/plutus/pull/4733
+      byteStringToInteger  :: BuiltinByteString -> Integer
+      byteStringToInteger b =
+        go 0
+          where len = BI.lengthOfByteString b
+                go i =
+                    if i >= len
+                    then 0
+                    else (Tx.indexByteString b i) + 256 * (go (i + 1))
+
+      calcAggregatedPubkeys :: Integer -> [BuiltinBLS12_381_G2_Element] -> BuiltinBLS12_381_G2_Element
+      calcAggregatedPubkeys dsScalar' pksDeser' =
+        go 1 (calc 0)
+          where
+            calc i = (dsScalar' `power` (i + 1)) `Tx.bls12_381_G2_scalarMul` (pksDeser' BI.!! i)
+            go i acc
+              | i >= length pksDeser' = acc
+              | otherwise = go (i + 1) (acc `Tx.bls12_381_G2_add` (calc i))
+
+      -- TODO: Is this one better?
+      -- calcAggregatedPubkeys :: Integer -> [BuiltinBLS12_381_G2_Element] -> BuiltinBLS12_381_G2_Element
+      -- calcAggregatedPubkeys dsScalar' pksDeser' =
+      --   Tx.foldl (\acc i -> acc `Tx.bls12_381_G2_add` (calc i)) (calc 0) loop
+      --   where
+      --     calc i = (dsScalar' `power` (i + 1)) `Tx.bls12_381_G2_scalarMul` (pksDeser' Tx.!! i)
+      --     loop = loop' [] 1
+      --     loop' a i
+      --       | i == (Tx.length pksDeser' Tx.- 1) = (a Tx.++ [i])
+      --       | otherwise                         = loop' (a Tx.++ [i]) (i Tx.+ 1)
+
+      power :: Integer -> Integer -> Integer
+      --power _ 0 = 1 -- this line breaks script compilation
+      power x n
+        | n == 0 = 1
+        | n > 0 = x * power x (n - 1)
 
 verifyBlsAggregateSigMultiKeyG2PolicyV2 :: MintingPolicy
-verifyBlsAggregateSigMultiKeyG2PolicyV2 = mkMintingPolicyScript
+verifyBlsAggregateSigMultiKeyG2PolicyV2 = mkMintingPolicyScript $
   $$(PlutusTx.compile [|| wrap ||])
+    `PlutusTx.applyCode` PlutusTx.liftCode byteString16Null
+    `PlutusTx.applyCode` PlutusTx.liftCode blsSigBls12381G2XmdSha256SswuRoNul
+    `PlutusTx.applyCode` PlutusTx.liftCode g2Generator
   where
     wrap = mkUntypedMintingPolicy @PlutusV2.ScriptContext mkBlsAggregateSigMultiKeyG2
 

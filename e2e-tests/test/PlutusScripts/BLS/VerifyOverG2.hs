@@ -42,9 +42,12 @@ PlutusTx.unstableMakeIsData ''BlsParams
 
 redeemerParams :: BlsParams
 redeemerParams = BlsParams
-  { message = "5032ec38bbc5da98ee0c6f568b872a65a08abf251deb21bb4b56e5d8821e68aa"
-  , pubKey = "b4953c4ba10c4d4196f90169e76faf154c260ed73fc77bb65dc3be31e0cec614a7287cda94195343676c2c57494f0e651527e6504c98408e599a4eb96f7c5a8cfb85d2fdc772f28504580084ef559b9b623bc84ce30562ed320f6b7f65245ad4"
-  , signature = "a9d4de7b0b2805fe52bccb86415ef7b8ffecb313c3c254044dfc1bdc531d3eae999d87717822a052692140774bd7245c"
+  { message = BI.toBuiltin $ bytesFromHex  "5032ec38bbc5da98ee0c6f568b872a65a08abf251deb21bb4b56e5d8821e68aa"
+  , pubKey = BI.toBuiltin $ bytesFromHex
+                ("b4953c4ba10c4d4196f90169e76faf154c260ed73fc77bb65dc3be31e0cec614a7287cda94195343676c2c57494f0e65" <>
+                "1527e6504c98408e599a4eb96f7c5a8cfb85d2fdc772f28504580084ef559b9b623bc84ce30562ed320f6b7f65245ad4")
+  , signature = BI.toBuiltin $ bytesFromHex ("a9d4de7b0b2805fe52bccb86415ef7b8ffecb313c3c25404" <>
+                                             "4dfc1bdc531d3eae999d87717822a052692140774bd7245c")
   }
 
 ---- BLS signature with the public key over G2 ----
@@ -56,18 +59,25 @@ redeemerParams = BlsParams
   * Check that pairing(pk_deser, hashed_msg) = pairing(G1Generator, sig_deser)
 -}
 {-# INLINABLE mkVerifySigG2 #-}
-mkVerifySigG2 :: BlsParams -> sc -> Bool
-mkVerifySigG2 BlsParams{..} _sc = do
+mkVerifySigG2 ::
+     BuiltinByteString
+  -> BuiltinBLS12_381_G1_Element
+  -> BlsParams
+  -> sc
+  -> Bool
+mkVerifySigG2 dst g2Gen BlsParams{..} _sc = do
   let
     pkDeser = BI.bls12_381_G2_uncompress pubKey
     sigDeser = BI.bls12_381_G1_uncompress signature
-    hashedMsg = BI.bls12_381_G1_hashToGroup message blsSigBls12381G2XmdSha256SswuRoNul
+    hashedMsg = BI.bls12_381_G1_hashToGroup message dst
 
-  BI.bls12_381_finalVerify (BI.bls12_381_millerLoop pkDeser hashedMsg) (BI.bls12_381_millerLoop g1 sigDeser)
+  BI.bls12_381_finalVerify (BI.bls12_381_millerLoop hashedMsg pkDeser) (BI.bls12_381_millerLoop sigDeser g2Gen)
 
 verifyBlsSigG2PolicyV2 :: MintingPolicy
-verifyBlsSigG2PolicyV2 = mkMintingPolicyScript
+verifyBlsSigG2PolicyV2 = mkMintingPolicyScript $
   $$(PlutusTx.compile [|| wrap ||])
+    `PlutusTx.applyCode` PlutusTx.liftCode blsSigBls12381G2XmdSha256SswuRoNul
+    `PlutusTx.applyCode` PlutusTx.liftCode g2Generator
   where
     wrap = mkUntypedMintingPolicy @PlutusV2.ScriptContext mkVerifySigG2
 
