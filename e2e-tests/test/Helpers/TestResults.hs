@@ -79,7 +79,7 @@ testCaseToJUnit suiteName result = defElement
                     , Attr (QName "value" Nothing Nothing) (testDescription $ resultTestInfo result) ]
       }
 
-    failureElement = defElement -- TODO: make framework handle test failures
+    failureElement = defElement
       { elName = QName "failure" Nothing Nothing
       , elAttribs = [Attr (QName "message" Nothing Nothing) "test failure"] -- example type
       , elContent = [Text $ CData CDataText (fromJust (resultFailure result)) Nothing]

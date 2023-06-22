@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 module Helpers.Utils where
 
 import Cardano.Api qualified as C
@@ -51,16 +52,16 @@ workspace prefixPath f = GHC.withFrozenCallStack $ do
 
 -- | Read file text envelope as a specific type (e.g. C.VerificationKey C.GenesisUTxOKey)
 --   and throw error on failure
-readAs :: (C.HasTextEnvelope a, MonadIO m, MonadTest m) => C.AsType a -> FilePath -> m a
+readAs :: (C.HasTextEnvelope a, MonadIO m, MonadTest m) => C.AsType a -> C.File content C.In -> m a
 readAs as path = do
-  path' <- H.note path
-  H.leftFailM . liftIO $ C.readFileTextEnvelope as path'
+  H.annotate $ C.unFile path
+  H.leftFailM . liftIO $ C.readFileTextEnvelope as path
 
 -- | Same as readAs but return Nothing on error
-maybeReadAs :: (C.HasTextEnvelope a, MonadIO m, MonadTest m) => C.AsType a -> FilePath -> m (Maybe a)
-maybeReadAs as path = do
-  path' <- H.note path
-  maybeEither . liftIO $ C.readFileTextEnvelope as path'
+maybeReadAs :: (C.HasTextEnvelope a, MonadIO m, MonadTest m) => C.AsType a -> C.File content C.In -> m (Maybe a)
+maybeReadAs as file@(C.File fp) = do
+  H.annotate fp
+  maybeEither . liftIO $ C.readFileTextEnvelope as file
   where
     maybeEither m = m >>= return . either (const Nothing) Just
 

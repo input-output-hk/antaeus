@@ -4,6 +4,7 @@
 {-# LANGUAGE NumericUnderscores #-}
 {-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 {-# OPTIONS_GHC -Wno-unused-do-bind #-}
+{-# LANGUAGE DataKinds          #-}
 
 module Helpers.Testnet where
 
@@ -21,7 +22,6 @@ import Hedgehog.Extras.Test.Base qualified as H
 import Helpers.Common (cardanoEraToShelleyBasedEra, makeAddress, toEraInCardanoMode)
 import Helpers.Utils (maybeReadAs)
 import System.Directory qualified as IO
-import System.Environment qualified as IO
 
 import System.FilePath ((</>))
 
@@ -33,6 +33,7 @@ import System.Posix.Signals (sigKILL, signalProcess)
 
 import Cardano.Testnet qualified as C
 import Cardano.Testnet qualified as CTN hiding (testnetMagic)
+import Hedgehog qualified as H
 import System.Process (cleanupProcess)
 import System.Process.Internals (PHANDLE, ProcessHandle__ (ClosedHandle, OpenExtHandle, OpenHandle), withProcessHandle)
 import Testnet.Util.Runtime qualified as CTN
@@ -108,14 +109,14 @@ startTestnet ::
 startTestnet era testnetOptions base tempAbsBasePath' = do
   configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
   conf :: CTN.Conf <- HE.noteShowM $
-    CTN.mkConf (CTN.ProjectBase base) (CTN.YamlFilePath configurationTemplate) (tempAbsBasePath' <> "/") Nothing
+    CTN.mkConf (CTN.ProjectBase base) (Just $ CTN.YamlFilePath configurationTemplate) (tempAbsBasePath' <> "/") Nothing
   tn <- CTN.testnet (testnetCardanoOptions testnetOptions) conf
 
   -- Boilerplate codecs used for protocol serialisation. The number of epochSlots is specific
   -- to each blockchain instance. This value is used by cardano mainnet/testnet and only applies
   -- to the Byron era.
   socketPathAbs <- getPoolSocketPathAbs conf tn
-  let epochSlots = C.EpochSlots 21600
+  let epochSlots = C.EpochSlots 21_600
       localNodeConnectInfo =
         C.LocalNodeConnectInfo
           { C.localConsensusModeParams = C.CardanoModeParams epochSlots
@@ -124,8 +125,8 @@ startTestnet era testnetOptions base tempAbsBasePath' = do
           }
       networkId = getNetworkId tn
   pparams <- getProtocolParams era localNodeConnectInfo
-  -- set node socket environment for Cardano.Api.Convenience.Query
-  liftIO $ IO.setEnv "CARDANO_NODE_SOCKET_PATH" socketPathAbs
+  -- no longer set node socket environment for Cardano.Api.Convenience.Query
+  -- TODO: REMOVE: liftIO $ IO.setEnv "CARDANO_NODE_SOCKET_PATH" socketPathAbs
   pure (localNodeConnectInfo, pparams, networkId, Just $ CTN.poolNodes tn)
 
 cleanupTestnet :: (MonadIO m) => Maybe [CTN.PoolNode] -> m [Either TimedOut ()]
@@ -166,7 +167,7 @@ connectToLocalNode era localNodeOptions tempAbsPath = do
   HE.createFileLink (localEnvDir' </> "test.vkey") (tempAbsPath </> "utxo-keys/utxo1.vkey")
   HE.createFileLink (localEnvDir' </> "ipc/node.socket") (tempAbsPath </> "sockets/node.socket")
 
-  let socketPathAbs = tempAbsPath </> "sockets/node.socket"
+  let socketPathAbs = C.File $ tempAbsPath </> "sockets/node.socket"
       networkId = C.Testnet $ C.NetworkMagic $ fromIntegral (localNodeTestnetMagic localNodeOptions)
 
   -- Boilerplate codecs used for protocol serialisation. The number of epochSlots is specific
@@ -180,8 +181,8 @@ connectToLocalNode era localNodeOptions tempAbsPath = do
             C.localNodeSocketPath = socketPathAbs
           }
   pparams <- getProtocolParams era localNodeConnectInfo
-  -- set node socket environment for Cardano.Api.Convenience.Query
-  liftIO $ IO.setEnv "CARDANO_NODE_SOCKET_PATH" socketPathAbs
+  -- No longer set node socket environment for Cardano.Api.Convenience.Query
+  --TODO: REMOVE: liftIO $ IO.setEnv "CARDANO_NODE_SOCKET_PATH" socketPathAbs
   pure (localNodeConnectInfo, pparams, networkId, Nothing)
 
 -- | Start testnet with cardano-testnet or use local node that's already
@@ -208,11 +209,13 @@ getNetworkId :: CTN.TestnetRuntime -> C.NetworkId
 getNetworkId tn = C.Testnet $ C.NetworkMagic $ fromIntegral (CTN.testnetMagic tn)
 
 -- | Path to a pool node's unix socket
-getPoolSocketPathAbs :: (MonadTest m, MonadIO m) => CTN.Conf -> CTN.TestnetRuntime -> m FilePath
+getPoolSocketPathAbs :: (MonadTest m, MonadIO m) => CTN.Conf -> CTN.TestnetRuntime -> m C.SocketPath
 getPoolSocketPathAbs conf tn = do
   let tempAbsPath = CTN.tempAbsPath conf
   socketPath <- IO.sprocketArgumentName <$> H.headM (CTN.poolSprockets tn)
-  H.note =<< (liftIO $ IO.canonicalizePath $ tempAbsPath </> socketPath)
+  fp <- liftIO $ IO.canonicalizePath $ tempAbsPath </> socketPath
+  H.annotate fp
+  return $ C.File fp
 
 -- | Query network's protocol parameters
 getProtocolParams :: (MonadIO m, MonadTest m)
@@ -239,14 +242,15 @@ w1 networkOptions tempAbsPath' networkId = do
         _                                                                                              -> ""
   -- GenesisUTxOKey comes from cardano-testnet
   mGenesisVKey :: Maybe (C.VerificationKey C.GenesisUTxOKey) <-
-    maybeReadAs (C.AsVerificationKey C.AsGenesisUTxOKey) $ tempAbsPath' </> extendedPath </> "utxo-keys/utxo1.vkey"
+    maybeReadAs (C.AsVerificationKey C.AsGenesisUTxOKey) $ C.File $
+      tempAbsPath' </> extendedPath </> "utxo-keys/utxo1.vkey"
   mGenesisSKey :: Maybe (C.SigningKey C.GenesisUTxOKey) <-
-    maybeReadAs (C.AsSigningKey C.AsGenesisUTxOKey) $ tempAbsPath' </> extendedPath </> "utxo-keys/utxo1.skey"
+    maybeReadAs (C.AsSigningKey C.AsGenesisUTxOKey) $ C.File $ tempAbsPath' </> extendedPath </> "utxo-keys/utxo1.skey"
   -- PaymentKey comes from cardano-cli (the likely type for a locally created wallet)
   mPaymentVKey :: Maybe (C.VerificationKey C.PaymentKey) <-
-    maybeReadAs (C.AsVerificationKey C.AsPaymentKey) $ tempAbsPath' </> extendedPath </> "utxo-keys/utxo1.vkey"
+    maybeReadAs (C.AsVerificationKey C.AsPaymentKey) $ C.File $ tempAbsPath' </> extendedPath </> "utxo-keys/utxo1.vkey"
   mPaymentSKey :: Maybe (C.SigningKey C.PaymentKey) <-
-    maybeReadAs (C.AsSigningKey C.AsPaymentKey) $ tempAbsPath' </> extendedPath </> "utxo-keys/utxo1.skey"
+    maybeReadAs (C.AsSigningKey C.AsPaymentKey) $ C.File $ tempAbsPath' </> extendedPath </> "utxo-keys/utxo1.skey"
 
   let vKey :: C.VerificationKey C.PaymentKey = maybe (fromJust mPaymentVKey) C.castVerificationKey mGenesisVKey
       sKey :: C.SigningKey C.PaymentKey = maybe (fromJust mPaymentSKey) C.castSigningKey mGenesisSKey

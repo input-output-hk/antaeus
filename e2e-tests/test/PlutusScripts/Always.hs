@@ -37,25 +37,30 @@ module PlutusScripts.Always
 where
 
 import Cardano.Api qualified as C
-import OldPlutus.Scripts (MintingPolicy, Validator, mkMintingPolicyScript, mkValidatorScript)
-import PlutusLedgerApi.V1 (Redeemer, ScriptPurpose (Minting))
+import Cardano.Api.Shelley qualified as C
+import Data.ByteString.Short qualified as SBS
+import PlutusLedgerApi.Common (SerialisedScript, serialiseCompiledCode)
+import PlutusLedgerApi.V1 (BuiltinData, Redeemer, ScriptPurpose (Minting))
 import PlutusLedgerApi.V2 qualified as PlutusV2 (Map)
 import PlutusScripts.Helpers (asRedeemer, fromPolicyId, mintScriptWitness, mintScriptWitness', plutusL1, plutusL2,
-                              policyIdV1, policyIdV2, policyScript, spendScriptWitness, toScriptData, validatorScript)
+                              policyIdV1, policyIdV2, spendScriptWitness, toScriptData)
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AMap
 import PlutusTx.Prelude qualified as P
 
 -- AlwaysSucceeds minting policy --
 
-alwaysSucceedPolicy :: MintingPolicy
-alwaysSucceedPolicy = mkMintingPolicyScript $$(PlutusTx.compile [||\_ _ -> ()||])
+mkAlwaysSucceedPolicy :: BuiltinData -> BuiltinData -> ()
+mkAlwaysSucceedPolicy _datum _sc = ()
+
+alwaysSucceedPolicy :: SBS.ShortByteString
+alwaysSucceedPolicy = serialiseCompiledCode $$(PlutusTx.compile [|| mkAlwaysSucceedPolicy ||])
 
 alwaysSucceedPolicyScriptV1 :: C.PlutusScript C.PlutusScriptV1
-alwaysSucceedPolicyScriptV1 = policyScript alwaysSucceedPolicy
+alwaysSucceedPolicyScriptV1 = C.PlutusScriptSerialised alwaysSucceedPolicy
 
 alwaysSucceedPolicyScriptV2 :: C.PlutusScript C.PlutusScriptV2
-alwaysSucceedPolicyScriptV2 = policyScript alwaysSucceedPolicy
+alwaysSucceedPolicyScriptV2 = C.PlutusScriptSerialised alwaysSucceedPolicy
 
 alwaysSucceedPolicyIdV2 :: C.PolicyId
 alwaysSucceedPolicyIdV2 = policyIdV2 alwaysSucceedPolicy
@@ -122,14 +127,17 @@ alwaysSucceedMintWitnessV2' era exunits =
 
 -- AlwaysSucceeds validator --
 
-alwaysSucceedSpend :: Validator
-alwaysSucceedSpend = mkValidatorScript $$(PlutusTx.compile [||\_ _ _ -> ()||])
+mkAlwaysSucceedSpend :: BuiltinData -> BuiltinData -> BuiltinData -> ()
+mkAlwaysSucceedSpend _datum _redeemer _sc = ()
+
+alwaysSucceedSpend :: SerialisedScript
+alwaysSucceedSpend = serialiseCompiledCode $$(PlutusTx.compile [|| mkAlwaysSucceedSpend ||])
 
 alwaysSucceedSpendScriptV1 :: C.PlutusScript C.PlutusScriptV1
-alwaysSucceedSpendScriptV1 = validatorScript alwaysSucceedSpend
+alwaysSucceedSpendScriptV1 = C.PlutusScriptSerialised alwaysSucceedSpend
 
 alwaysSucceedSpendScriptV2 :: C.PlutusScript C.PlutusScriptV2
-alwaysSucceedSpendScriptV2 = validatorScript alwaysSucceedSpend
+alwaysSucceedSpendScriptV2 = C.PlutusScriptSerialised alwaysSucceedSpend
 
 alwaysSucceedSpendScriptHashV1 :: C.ScriptHash
 alwaysSucceedSpendScriptHashV1 = C.hashScript $ C.PlutusScript C.PlutusScriptV1 alwaysSucceedSpendScriptV1
@@ -167,14 +175,17 @@ alwaysSucceedSpendWitnessV2 era mRefScript mDatum =
 
 -- AlwaysFails minting policy --
 
-alwaysFailsPolicy :: MintingPolicy
-alwaysFailsPolicy = mkMintingPolicyScript $$(PlutusTx.compile [||\_ _ -> P.error ()||])
+mkAlwaysFailsPolicy :: BuiltinData -> BuiltinData -> ()
+mkAlwaysFailsPolicy _datum _sc = P.error ()
+
+alwaysFailsPolicy :: SerialisedScript
+alwaysFailsPolicy = serialiseCompiledCode $$(PlutusTx.compile [|| mkAlwaysFailsPolicy ||])
 
 alwaysFailsPolicyScriptV1 :: C.PlutusScript C.PlutusScriptV1
-alwaysFailsPolicyScriptV1 = policyScript alwaysFailsPolicy
+alwaysFailsPolicyScriptV1 = C.PlutusScriptSerialised alwaysFailsPolicy
 
 alwaysFailsPolicyScriptV2 :: C.PlutusScript C.PlutusScriptV2
-alwaysFailsPolicyScriptV2 = policyScript alwaysFailsPolicy
+alwaysFailsPolicyScriptV2 = C.PlutusScriptSerialised alwaysFailsPolicy
 
 alwaysFailsPolicyIdV2 :: C.PolicyId
 alwaysFailsPolicyIdV2 = policyIdV2 alwaysFailsPolicy

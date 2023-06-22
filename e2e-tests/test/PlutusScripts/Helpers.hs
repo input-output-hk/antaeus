@@ -12,7 +12,7 @@ import Codec.Serialise (serialise)
 import Data.ByteString qualified as BS (ByteString)
 import Data.ByteString.Lazy qualified as LBS
 import Data.ByteString.Short qualified as SBS
-import OldPlutus.Scripts (MintingPolicy, Validator, unMintingPolicyScript, unValidatorScript)
+import PlutusLedgerApi.Common (SerialisedScript)
 import PlutusLedgerApi.V1 qualified as PlutusV1
 import PlutusLedgerApi.V1.Bytes qualified as P (bytes, fromHex)
 import PlutusLedgerApi.V1.Scripts (Datum (Datum), Redeemer (Redeemer))
@@ -116,13 +116,10 @@ maybeScriptWitness era lang Nothing = error $ "Era " ++ show era
                                     ++ " does not support script language " ++ show lang
 maybeScriptWitness _ _ (Just p) = p
 
+-- TODO: REMOVE?s
 -- | Serialised plutus script from minting policy
-policyScript :: MintingPolicy -> C.PlutusScript lang
-policyScript = C.PlutusScriptSerialised . SBS.toShort . LBS.toStrict . serialise . unMintingPolicyScript
-
--- | Serialised plutus script from validator
-validatorScript :: Validator -> C.PlutusScript lang
-validatorScript = C.PlutusScriptSerialised . SBS.toShort . LBS.toStrict . serialise . unValidatorScript
+-- plutusScriptSerialised :: SerialisedScript -> C.PlutusScript lang
+-- plutusScriptSerialised = C.PlutusScriptSerialised . SBS.toShort . LBS.toStrict . serialise
 
 -- | V1 Plutus Script to general Script, Needed for producing reference script.
 unPlutusScriptV1 :: C.PlutusScript C.PlutusScriptV1 -> C.Script C.PlutusScriptV1
@@ -133,12 +130,12 @@ unPlutusScriptV2 :: C.PlutusScript C.PlutusScriptV2 -> C.Script C.PlutusScriptV2
 unPlutusScriptV2 = C.PlutusScript C.PlutusScriptV2
 
 -- | PolicyId of a V1 minting policy
-policyIdV1 :: MintingPolicy -> C.PolicyId
-policyIdV1 = C.scriptPolicyId . unPlutusScriptV1 . policyScript
+policyIdV1 :: SBS.ShortByteString -> C.PolicyId
+policyIdV1 = C.scriptPolicyId . unPlutusScriptV1 . C.PlutusScriptSerialised
 
 -- | PolicyId of a V2 minting policy
-policyIdV2 :: MintingPolicy -> C.PolicyId
-policyIdV2 = C.scriptPolicyId . unPlutusScriptV2 . policyScript
+policyIdV2 :: SBS.ShortByteString -> C.PolicyId
+policyIdV2 = C.scriptPolicyId . unPlutusScriptV2 . C.PlutusScriptSerialised
 
 fromPolicyId :: C.PolicyId -> CurrencySymbol
 fromPolicyId (C.PolicyId hash) = PlutusV1.CurrencySymbol . BI.toBuiltin $ C.serialiseToRawBytes hash
