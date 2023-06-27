@@ -23,13 +23,15 @@ module PlutusScripts.V1TxInfo (
   ) where
 
 import Cardano.Api qualified as C
+import Cardano.Api.Shelley qualified as C
+import Data.ByteString.Short qualified as SBS
 import Helpers.ScriptUtils (IsScriptContext (mkUntypedMintingPolicy))
 import Helpers.TypeConverters (fromCardanoPaymentKeyHash, fromCardanoScriptData, fromCardanoTxIn,
                                fromCardanoTxOutToPV1TxInfoTxOut, fromCardanoTxOutToPV1TxInfoTxOut', fromCardanoValue)
-import OldPlutus.Scripts (MintingPolicy, mkMintingPolicyScript)
+import PlutusLedgerApi.Common (serialiseCompiledCode)
 import PlutusLedgerApi.V1 qualified as PlutusV1
 import PlutusLedgerApi.V1.Interval qualified as P
-import PlutusScripts.Helpers (mintScriptWitness', plutusL1, policyIdV1, policyScript, toScriptData)
+import PlutusScripts.Helpers (mintScriptWitness', plutusL1, policyIdV1, toScriptData)
 import PlutusTx qualified
 import PlutusTx.Builtins qualified as P
 import PlutusTx.Prelude qualified as P
@@ -117,14 +119,14 @@ mkCheckV1TxInfo V1TxInfo{..} ctx =
   checkTxInfoData = expTxInfoData P.== PlutusV1.txInfoData info
   checkTxInfoId = P.equalsInteger 32 (P.lengthOfByteString P.$ PlutusV1.getTxId P.$ PlutusV1.txInfoId info)
 
-checkV1TxInfoV1 :: MintingPolicy
-checkV1TxInfoV1 = mkMintingPolicyScript
+checkV1TxInfoV1 :: SBS.ShortByteString
+checkV1TxInfoV1 = serialiseCompiledCode
   $$(PlutusTx.compile [|| wrap ||])
   where
     wrap = mkUntypedMintingPolicy @PlutusV1.ScriptContext mkCheckV1TxInfo
 
 checkV1TxInfoScriptV1 :: C.PlutusScript C.PlutusScriptV1
-checkV1TxInfoScriptV1 = policyScript checkV1TxInfoV1
+checkV1TxInfoScriptV1 = C.PlutusScriptSerialised checkV1TxInfoV1
 
 checkV1TxInfoAssetIdV1 :: C.AssetId
 checkV1TxInfoAssetIdV1 = C.AssetId (policyIdV1 checkV1TxInfoV1) "V1TxInfo"

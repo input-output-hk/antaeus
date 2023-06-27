@@ -13,8 +13,8 @@ repository cardano-haskell-packages
 
 -- See CONTRIBUTING.adoc for how to update index-state
 index-state:
-  , hackage.haskell.org 2023-05-11T00:00:00Z
-  , cardano-haskell-packages 2023-05-11T00:00:00Z
+  , hackage.haskell.org 2023-06-20T10:00:00Z
+  , cardano-haskell-packages 2023-06-20T10:10:00Z
 packages: e2e-tests
 
 -- We never, ever, want this.
@@ -44,23 +44,32 @@ package cardano-api
 package cardano-crypto-praos
   flags: -external-libsodium-vrf
 
--- Pin to the master with 8.0.0 version (not an official release)
+-- Pin to 8.1.1
 source-repository-package
     type: git
     location: https://github.com/input-output-hk/cardano-node
-    tag: a158a679690ed8b003ee06e1216ac8acd5ab823d
+    tag: 6b601db8c7fcd3b55e78244c21aca2d17ca3aeaa
     subdir:
-      cardano-api
+      cardano-testnet
       cardano-cli
       cardano-node
       trace-forward
       trace-dispatcher
       trace-resources
 
--- Fork for improvements to Babbage testnet - see https://github.com/input-output-hk/cardano-node/pull/5224
+-- Pin to 8.2
+source-repository-package
+    type: git
+    location: https://github.com/input-output-hk/cardano-api
+    tag: 89fd11781d8ba19ce50f516ecef30607d2e704e8
+    subdir:
+      cardano-api
+
+
+-- Fork for improvements to Babbage testnet - see TODO: UPDATE URL: https://github.com/input-output-hk/cardano-node/pull/5224
 source-repository-package
     type: git
     location: https://github.com/james-iohk/cardano-node
-    tag: adf50dc5de3d44bdb5c3dc0b28e18b3a5477f36c
+    tag: 40602980e695b90b2137c9b4564a09c263b600cc
     subdir:
       cardano-testnet

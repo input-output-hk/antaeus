@@ -21,12 +21,12 @@ module PlutusScripts.SECP256k1 (
   ) where
 
 import Cardano.Api qualified as C
+import Cardano.Api.Shelley qualified as C
 import Helpers.ScriptUtils (IsScriptContext (mkUntypedMintingPolicy))
-import OldPlutus.Scripts (MintingPolicy, mkMintingPolicyScript)
+import PlutusLedgerApi.Common (SerialisedScript, serialiseCompiledCode)
 import PlutusLedgerApi.V1 qualified as PlutusV1
 import PlutusLedgerApi.V2 qualified as PlutusV2
-import PlutusScripts.Helpers (bytesFromHex, mintScriptWitness, plutusL1, plutusL2, policyIdV1, policyIdV2, policyScript,
-                              toScriptData)
+import PlutusScripts.Helpers (bytesFromHex, mintScriptWitness, plutusL1, plutusL2, policyIdV1, policyIdV2, toScriptData)
 import PlutusTx qualified
 import PlutusTx.Builtins qualified as BI
 import PlutusTx.Prelude qualified as P
@@ -46,23 +46,23 @@ PlutusTx.unstableMakeIsData ''Secp256Params
 mkVerifySchnorrPolicy :: Secp256Params -> sc -> Bool
 mkVerifySchnorrPolicy Secp256Params{..} _sc = BI.verifySchnorrSecp256k1Signature vkey msg sig
 
-verifySchnorrPolicyV1 :: MintingPolicy
-verifySchnorrPolicyV1 = mkMintingPolicyScript
+verifySchnorrPolicyV1 :: SerialisedScript
+verifySchnorrPolicyV1 = serialiseCompiledCode
   $$(PlutusTx.compile [|| wrap ||])
   where
     wrap = mkUntypedMintingPolicy @PlutusV1.ScriptContext mkVerifySchnorrPolicy
 
-verifySchnorrPolicyV2 :: MintingPolicy
-verifySchnorrPolicyV2 = mkMintingPolicyScript
+verifySchnorrPolicyV2 :: SerialisedScript
+verifySchnorrPolicyV2 = serialiseCompiledCode
   $$(PlutusTx.compile [|| wrap ||])
   where
     wrap = mkUntypedMintingPolicy @PlutusV2.ScriptContext mkVerifySchnorrPolicy
 
 verifySchnorrPolicyScriptV1 :: C.PlutusScript C.PlutusScriptV1
-verifySchnorrPolicyScriptV1 = policyScript verifySchnorrPolicyV1
+verifySchnorrPolicyScriptV1 = C.PlutusScriptSerialised verifySchnorrPolicyV1
 
 verifySchnorrPolicyScriptV2 :: C.PlutusScript C.PlutusScriptV2
-verifySchnorrPolicyScriptV2 = policyScript verifySchnorrPolicyV2
+verifySchnorrPolicyScriptV2 = C.PlutusScriptSerialised verifySchnorrPolicyV2
 
 schnorrAssetName :: C.AssetName
 schnorrAssetName = C.AssetName "Schnorr"
@@ -104,23 +104,23 @@ verifySchnorrMintWitnessV2 era =
 mkVerifyEcdsaPolicy :: Secp256Params -> sc -> Bool
 mkVerifyEcdsaPolicy Secp256Params{..} _sc = BI.verifyEcdsaSecp256k1Signature vkey msg sig
 
-verifyEcdsaPolicyV1 :: MintingPolicy
-verifyEcdsaPolicyV1 = mkMintingPolicyScript
+verifyEcdsaPolicyV1 :: SerialisedScript
+verifyEcdsaPolicyV1 = serialiseCompiledCode
   $$(PlutusTx.compile [|| wrap ||])
   where
     wrap = mkUntypedMintingPolicy @PlutusV1.ScriptContext mkVerifyEcdsaPolicy
 
-verifyEcdsaPolicyV2 :: MintingPolicy
-verifyEcdsaPolicyV2 = mkMintingPolicyScript
+verifyEcdsaPolicyV2 :: SerialisedScript
+verifyEcdsaPolicyV2 = serialiseCompiledCode
   $$(PlutusTx.compile [|| wrap ||])
   where
     wrap = mkUntypedMintingPolicy @PlutusV2.ScriptContext mkVerifyEcdsaPolicy
 
 verifyEcdsaPolicyScriptV1 :: C.PlutusScript C.PlutusScriptV1
-verifyEcdsaPolicyScriptV1 = policyScript verifyEcdsaPolicyV1
+verifyEcdsaPolicyScriptV1 = C.PlutusScriptSerialised verifyEcdsaPolicyV1
 
 verifyEcdsaPolicyScriptV2 :: C.PlutusScript C.PlutusScriptV2
-verifyEcdsaPolicyScriptV2 = policyScript verifyEcdsaPolicyV2
+verifyEcdsaPolicyScriptV2 = C.PlutusScriptSerialised verifyEcdsaPolicyV2
 
 ecdsaAssetName :: C.AssetName
 ecdsaAssetName = C.AssetName "ECDSA"

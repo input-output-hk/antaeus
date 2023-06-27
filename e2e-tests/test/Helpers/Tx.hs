@@ -61,7 +61,8 @@ withIsShelleyBasedEra era r =
   case era of
     C.AlonzoEra  -> r
     C.BabbageEra -> r
-    _            -> error "Must use Alonzo or Babbage era"
+    C.ConwayEra  -> r
+    _            -> error "Must use Alonzo, Babbage or Conway era"
 
 -- | Build TxOut for spending or minting with no datum or reference script present
 txOut ::
@@ -247,13 +248,14 @@ txMintValue era tv m = C.TxMintValue (multiAssetSupportedInEra era) tv (C.BuildT
 buildTx ::
   (MonadIO m, MonadTest m) =>
   C.CardanoEra era ->
+  C.SocketPath ->
   C.TxBodyContent C.BuildTx era ->
   C.Address C.ShelleyAddr ->
   C.SigningKey C.PaymentKey ->
   C.NetworkId ->
   m (C.Tx era)
-buildTx era txBody changeAddress sKey networkId = do
-  eitherTx <- buildTx' era txBody changeAddress sKey networkId
+buildTx era socketPath txBody changeAddress sKey networkId = do
+  eitherTx <- buildTx' era socketPath txBody changeAddress sKey networkId
   return $ fromEither eitherTx
   where
     fromEither (Left e)   = error $ show e
@@ -264,15 +266,16 @@ buildTx era txBody changeAddress sKey networkId = do
 buildTx' ::
   (MonadIO m, MonadTest m) =>
   C.CardanoEra era ->
+  C.SocketPath ->
   C.TxBodyContent C.BuildTx era ->
   C.Address C.ShelleyAddr ->
   C.SigningKey C.PaymentKey ->
   C.NetworkId ->
   m (Either C.TxBodyErrorAutoBalance (C.Tx era))
-buildTx' era txBody changeAddress sKey networkId = do
-  (nodeEraUtxo, pparams, eraHistory, systemStart, stakePools) <-
+buildTx' era socketPath txBody changeAddress sKey networkId = do
+  (nodeEraUtxo, pparams, eraHistory, systemStart, stakePools, stakeValueMap) <-
     H.leftFailM . liftIO $
-      C.queryStateForBalancedTx era networkId allInputs
+      C.queryStateForBalancedTx socketPath era networkId allInputs []
 
   return $
     withIsShelleyBasedEra era $
@@ -285,6 +288,7 @@ buildTx' era txBody changeAddress sKey networkId = do
         (C.toLedgerEpochInfo eraHistory)
         systemStart
         stakePools
+        stakeValueMap
         [C.WitnessPaymentKey sKey]
   where
     allInputs :: [C.TxIn]

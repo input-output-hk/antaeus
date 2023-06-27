@@ -15,9 +15,20 @@
     #
     #   iogx.inputs.hackage.url = "github:input-output-hk/hackage/my-branch"
     iogx.url = "github:input-output-hk/iogx";
+    iogx.inputs.hackage.follows = "hackage";
+    iogx.inputs.CHaP.follows = "CHaP";
+    hackage = {
+      url = "github:input-output-hk/hackage.nix";
+      flake = false;
+    };
+    CHaP = {
+      url = "github:input-output-hk/cardano-haskell-packages?ref=repo";
+      flake = false;
+    };
 
     # Other inputs can be defined as usual.
     # foobar.url = "github:foo/bar";
+
   };
 
   outputs = inputs: inputs.iogx.mkFlake {
