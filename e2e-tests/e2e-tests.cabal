@@ -122,12 +122,23 @@ test-suite antaeus-test
     OldPlutus.Prettyprinter.Extras
     OldPlutus.Scripts
     PlutusScripts.Always
+    PlutusScripts.BLS
+    PlutusScripts.BLS.AggregateSigWithMultipleKeys
+    PlutusScripts.BLS.AggregateSigWithSameKey
+    PlutusScripts.BLS.Common
+    PlutusScripts.BLS.Groth16
+    PlutusScripts.BLS.SchnorrG1
+    PlutusScripts.BLS.SchnorrG2
+    PlutusScripts.BLS.SimpleSignAndVerify
+    PlutusScripts.BLS.VerifyOverG1
+    PlutusScripts.BLS.Vrf
     PlutusScripts.Helpers
     PlutusScripts.SECP256k1
     PlutusScripts.V1TxInfo
     PlutusScripts.V2TxInfo
     Spec.AlonzoFeatures
     Spec.BabbageFeatures
+    Spec.Builtins.BLS
     Spec.Builtins.SECP256k1
 
   --------------------------
