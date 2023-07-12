@@ -8,13 +8,6 @@ let
 
   packages = {
 
-    # # These need R
-    # plutus-core.components.benchmarks.cost-model-test.buildable = lib.mkForce (!isCross);
-    # plutus-core.components.benchmarks.update-cost-model.buildable = lib.mkForce (!isCross);
-
-    # # FIXME: Haddock mysteriously gives a spurious missing-home-modules warning
-    # plutus-tx-plugin.doHaddock = false;
-
     e2e-tests.package.buildable = !isCross;
     e2e-tests.ghcOptions = [ "-Werror" ];
     e2e-tests.doHaddock = meta.enableHaddock;

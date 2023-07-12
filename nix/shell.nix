@@ -7,6 +7,7 @@ let
   cardano-cli = project.hsPkgs.cardano-cli.components.exes.cardano-cli;
   cardano-node = project.hsPkgs.cardano-node.components.exes.cardano-node;
 in
+
 {
   name = "antaeus";
   prompt = "\n\\[\\033[1;32m\\][antaeus:\\w]\\$\\[\\033[0m\\] ";
